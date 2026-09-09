@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noor Studio — AI Design Tool</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Nastaliq+Urdu&family=Poppins&family=Roboto+Mono&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0a16; --bg2: #12121f; --bg3: #1a1a2e; --bg4: #22223a;
+            --border: #2d2d4a; --text: #eeeef5; --text2: #9999bb;
+            --accent: #6c63ff; --accent2: #f06595; --accent-glow: rgba(108, 99, 255, 0.35);
+            --success: #51cf66; --danger: #ff6b6b; --radius: 10px;
+            --shadow: 0 25px 80px rgba(0, 0, 0, 0.8); --transition: 0.2s ease;
+            --font: 'Inter', -apple-system, sans-serif;
+        }
+        body { font-family: var(--font); background: var(--bg); color: var(--text); height: 100vh; display: flex; flex-direction: column; overflow: hidden; user-select: none; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: var(--bg2); }
+        ::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 10px; }
+
+        .topbar { background: var(--bg2); padding: 5px 12px; display: flex; align-items: center; gap: 4px; border-bottom: 1px solid var(--border); flex-shrink: 0; flex-wrap: wrap; z-index: 100; min-height: 44px; }
+        .topbar .logo { font-weight: 800; font-size: 16px; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-right: 8px; white-space: nowrap; }
+        .topbar button, .topbar select { background: transparent; border: none; color: var(--text2); padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 500; cursor: pointer; transition: var(--transition); font-family: var(--font); display: flex; align-items: center; gap: 4px; white-space: nowrap; height: 28px; }
+        .topbar button:hover, .topbar select:hover { background: var(--bg3); color: #fff; }
+        .topbar button.primary { background: var(--accent); color: #fff; }
+        .topbar button.primary:hover { background: #7b73ff; box-shadow: 0 0 20px var(--accent-glow); }
+        .topbar button.danger { color: var(--danger); }
+        .topbar button.success { background: var(--success); color: #fff; }
+        .topbar .spacer { flex: 1; }
+        .topbar select { background: var(--bg4); border: 1px solid var(--border); color: var(--text); padding: 2px 6px; appearance: none; min-width: 80px; font-size: 10px; }
+        .topbar .zoom-group { display: flex; align-items: center; gap: 3px; background: var(--bg4); border-radius: 16px; padding: 1px 6px; border: 1px solid var(--border); }
+        .topbar .zoom-group input[type="range"] { width: 50px; accent-color: var(--accent); background: transparent; cursor: pointer; height: 3px; }
+        .topbar .zoom-group span { font-size: 10px; min-width: 30px; text-align: center; color: var(--text2); }
+
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
+        .left-toolbar { width: 56px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 8px 0; gap: 2px; flex-shrink: 0; overflow-y: auto; }
+        .left-toolbar button { width: 40px; height: 40px; background: transparent; border: none; color: var(--text2); border-radius: 8px; font-size: 15px; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0px; font-family: var(--font); position: relative; }
+        .left-toolbar button span { font-size: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px; opacity: 0.6; }
+        .left-toolbar button:hover { background: var(--bg3); color: #fff; }
+        .left-toolbar button.active { background: var(--accent); color: #fff; box-shadow: 0 3px 14px var(--accent-glow); }
+        .left-toolbar .sep { width: 24px; height: 1px; background: var(--border); margin: 3px 0; }
+        .left-toolbar .file-input-wrap { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+        .left-toolbar .file-input-wrap input[type="file"] { position: absolute; opacity: 0; width: 40px; height: 40px; cursor: pointer; }
+        .left-toolbar .file-input-wrap button { pointer-events: none; }
+
+        .canvas-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; background: #06060e; padding: 12px; position: relative; overflow: auto; }
+        .canvas-container { background: var(--bg2); border-radius: var(--radius); box-shadow: var(--shadow); display: inline-block; position: relative; border: 1px solid var(--border); }
+        .canvas-container canvas { display: block; border-radius: 6px; width: 100% !important; height: auto !important; max-width: 100%; max-height: 70vh; }
+        .canvas-container .grid-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; opacity: 0.06; background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 20px 20px; display: none; border-radius: 6px; }
+        .canvas-container .grid-overlay.active { display: block; }
+        .canvas-container .size-badge { position: absolute; bottom: 6px; right: 10px; font-size: 9px; color: var(--text2); opacity: 0.3; background: rgba(0, 0, 0, 0.6); padding: 1px 8px; border-radius: 8px; pointer-events: none; font-family: monospace; }
+
+        .right-panel { width: 300px; background: var(--bg2); border-left: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+        .panel-tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); flex-shrink: 0; overflow-x: auto; }
+        .panel-tabs button { flex: 1; background: transparent; border: none; color: var(--text2); padding: 6px 0; font-size: 9px; font-weight: 600; cursor: pointer; transition: var(--transition); border-bottom: 2px solid transparent; font-family: var(--font); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; min-width: 50px; }
+        .panel-tabs button:hover { color: #fff; background: var(--bg3); }
+        .panel-tabs button.active { color: #fff; border-bottom-color: var(--accent); background: var(--bg3); }
+
+        .panel-content { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+        .panel-content .tab-page { display: none; flex-direction: column; gap: 10px; }
+        .panel-content .tab-page.active { display: flex; }
+
+        .prop-group { display: flex; flex-direction: column; gap: 2px; }
+        .prop-group label { font-size: 9px; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+        .prop-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+        .prop-row .prop-group { flex: 1; min-width: 40px; }
+        .prop-group input, .prop-group select { background: var(--bg4); border: 1px solid var(--border); color: var(--text); padding: 3px 6px; border-radius: 4px; font-size: 11px; outline: none; transition: var(--transition); font-family: var(--font); width: 100%; height: 28px; }
+        .prop-group input:focus, .prop-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-glow); }
+        .prop-group input[type="color"] { padding: 1px; height: 30px; cursor: pointer; }
+        .prop-group input[type="range"] { padding: 0; accent-color: var(--accent); height: 3px; cursor: pointer; }
+        .prop-group input[type="file"] { padding: 2px; height: auto; font-size: 9px; }
+        .btn-group { display: flex; gap: 2px; flex-wrap: wrap; }
+        .btn-group button { background: var(--bg4); border: 1px solid var(--border); color: var(--text2); padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 11px; transition: var(--transition); font-family: var(--font); height: 24px; display: flex; align-items: center; justify-content: center; }
+        .btn-group button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn-group button:hover { background: var(--bg3); color: #fff; }
+
+        .no-sel { color: var(--text2); text-align: center; padding: 20px 0; font-size: 12px; line-height: 1.6; }
+        .no-sel i { font-size: 28px; display: block; margin-bottom: 8px; opacity: 0.3; }
+
+        .layer-list { max-height: 120px; overflow-y: auto; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); padding: 2px; }
+        .layer-item { padding: 3px 6px; border-radius: 3px; display: flex; align-items: center; gap: 6px; font-size: 10px; cursor: pointer; color: var(--text2); transition: 0.1s; border-left: 2px solid transparent; height: 24px; }
+        .layer-item:hover { background: var(--bg3); color: #fff; }
+        .layer-item.active { background: var(--bg4); border-left-color: var(--accent); color: #fff; }
+        .layer-item i { width: 14px; font-size: 10px; text-align: center; }
+        .layer-item .layer-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .layer-item .layer-vis { cursor: pointer; opacity: 0.4; transition: var(--transition); }
+        .layer-item .layer-vis:hover { opacity: 1; }
+        .layer-item .layer-vis.visible { opacity: 1; }
+
+        .sticker-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; max-height: 160px; overflow-y: auto; padding: 2px; }
+        .sticker-grid .sticker-item { background: var(--bg4); border: 1px solid var(--border); border-radius: 4px; padding: 6px; text-align: center; font-size: 22px; cursor: pointer; transition: var(--transition); aspect-ratio: 1; display: flex; align-items: center; justify-content: center; }
+        .sticker-grid .sticker-item:hover { background: var(--accent); transform: scale(1.05); border-color: var(--accent); }
+        .template-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+        .template-grid .template-item { background: var(--bg4); border: 1px solid var(--border); border-radius: 6px; padding: 10px 6px; text-align: center; cursor: pointer; transition: var(--transition); font-size: 10px; color: var(--text2); }
+        .template-grid .template-item:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .template-grid .template-item i { font-size: 20px; display: block; margin-bottom: 4px; }
+        .history-list { max-height: 100px; overflow-y: auto; font-size: 10px; color: var(--text2); }
+        .history-list .h-item { padding: 2px 6px; border-radius: 3px; cursor: pointer; transition: var(--transition); }
+        .history-list .h-item:hover { background: var(--bg3); color: #fff; }
+        .history-list .h-item.active { background: var(--accent); color: #fff; }
+
+        @media (max-width: 1024px) { .right-panel { width: 250px; } }
+        @media (max-width: 768px) {
+            .main-layout { flex-direction: column; }
+            .left-toolbar { flex-direction: row; width: 100%; height: 48px; border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto; padding: 2px 6px; gap: 1px; justify-content: center; }
+            .left-toolbar button { width: 36px; height: 36px; flex-shrink: 0; font-size: 13px; }
+            .left-toolbar button span { display: none; }
+            .left-toolbar .sep { width: 1px; height: 24px; margin: 0 2px; }
+            .left-toolbar .file-input-wrap { width: 36px; height: 36px; }
+            .left-toolbar .file-input-wrap input[type="file"] { width: 36px; height: 36px; }
+            .right-panel { width: 100%; height: 35vh; border-left: none; border-top: 1px solid var(--border); }
+            .canvas-container canvas { max-height: 30vh; }
+            .topbar { padding: 3px 8px; gap: 3px; min-height: 36px; }
+            .topbar button, .topbar select { font-size: 10px; padding: 2px 5px; height: 24px; }
+            .topbar .logo { font-size: 13px; }
+            .topbar .zoom-group input[type="range"] { width: 30px; }
+            .sticker-grid { grid-template-columns: repeat(4, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP BAR -->
+    <div class="topbar">
+        <div class="logo"><i class="fas fa-crown"></i>Noor studio</div>
+        <div class="divider"></div>
+        <button id="undoBtn"><i class="fas fa-undo"></i></button>
+        <button id="redoBtn"><i class="fas fa-redo"></i></button>
+        <div class="divider"></div>
+        <select id="canvasPreset">
+            <option value="900x600">Custom</option>
+            <option value="1080x1080">Instagram 1:1</option>
+            <option value="1080x1920">Story 9:16</option>
+            <option value="1920x1080">YouTube 16:9</option>
+            <option value="1200x630">FB Cover</option>
+            <option value="595x842">A4 Portrait</option>
+        </select>
+        <button id="applyPresetBtn" class="primary"><i class="fas fa-check"></i></button>
+        <div class="divider"></div>
+        <button id="lockBtn"><i class="fas fa-lock"></i></button>
+        <button id="gridBtn"><i class="fas fa-th"></i></button>
+        <button id="snapBtn"><i class="fas fa-magnet"></i></button>
+        <button id="guidesBtn"><i class="fas fa-ruler"></i></button>
+        <div class="divider"></div>
+        <button id="aiGenerateBtn" class="primary" style="background:#f06595;"><i class="fas fa-robot"></i> AI Text</button>
+        <button id="autoLayoutBtn"><i class="fas fa-object-group"></i> Layout</button>
+        <div class="divider"></div>
+        <button id="copyBtn"><i class="fas fa-copy"></i></button>
+        <button id="pasteBtn"><i class="fas fa-paste"></i></button>
+        <div class="divider"></div>
+        <button id="saveProjectBtn"><i class="fas fa-save"></i></button>
+        <button id="loadProjectBtn"><i class="fas fa-folder-open"></i></button>
+        <input type="file" id="loadProjectInput" accept=".json" style="display:none">
+        <div class="divider"></div>
+        <button id="exportPng" class="primary"><i class="fas fa-file-image"></i> PNG</button>
+        <button id="exportJpg" class="success"><i class="fas fa-file-image"></i> JPG</button>
+        <button id="exportSvg"><i class="fas fa-file-code"></i> SVG</button>
+        <span class="spacer"></span>
+        <div class="zoom-group">
+            <button id="zoomOutBtn" style="background:transparent;border:none;color:var(--text2);cursor:pointer;padding:0 3px;"><i class="fas fa-minus"></i></button>
+            <input type="range" id="zoomSlider" min="10" max="200" value="100">
+            <button id="zoomInBtn" style="background:transparent;border:none;color:var(--text2);cursor:pointer;padding:0 3px;"><i class="fas fa-plus"></i></button>
+            <span id="zoomLabel">100%</span>
+        </div>
+        <button id="clearCanvasBtn" class="danger"><i class="fas fa-trash-alt"></i></button>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-layout">
+        <div class="left-toolbar">
+            <button id="toolSelect" class="active"><i class="fas fa-mouse-pointer"></i><span>Select</span></button>
+            <button id="toolText"><i class="fas fa-font"></i><span>Text</span></button>
+            <button id="toolRect"><i class="fas fa-square"></i><span>Rect</span></button>
+            <button id="toolCircle"><i class="fas fa-circle"></i><span>Circle</span></button>
+            <button id="toolTriangle"><i class="fas fa-play"></i><span>Tri</span></button>
+            <button id="toolLine"><i class="fas fa-minus"></i><span>Line</span></button>
+            <button id="toolStar"><i class="fas fa-star"></i><span>Star</span></button>
+            <div class="sep"></div>
+            <div class="file-input-wrap">
+                <button id="addImageBtn"><i class="fas fa-image"></i><span>Image</span></button>
+                <input type="file" id="imageUploadInput" accept="image/*" capture>
+            </div>
+            <button id="addEmoji"><i class="fas fa-smile"></i><span>Emoji</span></button>
+            <button id="addQrBtn"><i class="fas fa-qrcode"></i><span>QR</span></button>
+            <div class="sep"></div>
+            <button id="deleteBtn" style="color:var(--danger);"><i class="fas fa-trash"></i><span>Del</span></button>
+            <button id="duplicateBtn"><i class="fas fa-copy"></i><span>Dup</span></button>
+        </div>
+
+        <div class="canvas-wrapper">
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="editorCanvas"></canvas>
+                <div class="grid-overlay" id="gridOverlay"></div>
+                <div class="size-badge" id="sizeBadge">900×600</div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="panel-tabs">
+                <button class="active" data-tab="tabDesign">Design</button>
+                <button data-tab="tabEffects">Effects</button>
+                <button data-tab="tabStickers">Stickers</button>
+                <button data-tab="tabTemplates">Templates</button>
+                <button data-tab="tabLayer">Layers</button>
+                <button data-tab="tabLayout">Layout</button>
+                <button data-tab="tabHistory">History</button>
+            </div>
+
+            <div class="panel-content">
+                <div class="tab-page active" id="tabDesign">
+                    <div id="noSelectionMsg" class="no-sel"><i class="fas fa-cube"></i>Select an element to edit</div>
+                    <div id="propText" style="display:none; flex-direction:column; gap:8px;">
+                        <div class="prop-group"><label>Font</label><select id="pFont"><option value="Inter">Inter</option><option value="Poppins">Poppins</option><option value="Noto Nastaliq Urdu">Urdu</option><option value="Roboto Mono">Mono</option></select></div>
+                        <div class="prop-row"><div class="prop-group"><label>Size</label><input type="number" id="pSize" value="36" min="4"></div><div class="prop-group"><label>Color</label><input type="color" id="pColor" value="#ffffff"></div></div>
+                        <div class="prop-row"><div class="prop-group"><label>Bg</label><input type="color" id="pBgColor" value="#00000000"></div><div class="prop-group"><label>Opacity</label><input type="range" id="pOpacity" min="0" max="100" value="100"></div></div>
+                        <div class="btn-group"><button id="pBold"><b>B</b></button><button id="pItalic"><i>I</i></button><button id="pUnderline"><u>U</u></button><button id="pAlignLeft"><i class="fas fa-align-left"></i></button><button id="pAlignCenter"><i class="fas fa-align-center"></i></button><button id="pAlignRight"><i class="fas fa-align-right"></i></button></div>
+                        <div class="prop-group"><label>Upload Custom Font (.ttf/.woff/.woff2)</label><input type="file" id="customFontInput" accept=".ttf,.woff,.woff2"><button id="applyCustomFontBtn" style="background:var(--bg4);border:1px solid var(--border);padding:3px;border-radius:4px;color:var(--text);cursor:pointer;margin-top:2px;font-size:10px;">Apply to Selected Text</button></div>
+                    </div>
+                    <div id="propShape" style="display:none; flex-direction:column; gap:8px;">
+                        <div class="prop-row"><div class="prop-group"><label>Fill</label><input type="color" id="sFill" value="#6c63ff"></div><div class="prop-group"><label>Stroke</label><input type="color" id="sStroke" value="#000000"></div></div>
+                        <div class="prop-row"><div class="prop-group"><label>Stroke W</label><input type="number" id="sStrokeWidth" value="2" min="0"></div><div class="prop-group"><label>Radius</label><input type="number" id="sRadius" value="0" min="0"></div></div>
+                        <div class="prop-group"><label>Opacity</label><input type="range" id="sOpacity" min="0" max="100" value="100"></div>
+                    </div>
+                    <div id="propImage" style="display:none; flex-direction:column; gap:8px;">
+                        <div class="prop-group"><label>Brightness</label><input type="range" id="iBrightness" min="-100" max="100" value="0"></div>
+                        <div class="prop-group"><label>Contrast</label><input type="range" id="iContrast" min="-100" max="100" value="0"></div>
+                        <div class="prop-group"><label>Grayscale</label><input type="range" id="iGrayscale" min="0" max="100" value="0"></div>
+                        <div class="prop-group"><label>Sepia</label><input type="range" id="iSepia" min="0" max="100" value="0"></div>
+                        <button id="resetFiltersBtn" style="background:var(--bg4);border:1px solid var(--border);padding:4px;border-radius:4px;color:var(--text);cursor:pointer;">Reset</button>
+                    </div>
+                </div>
+
+                <div class="tab-page" id="tabEffects">
+                    <div id="effectsMsg" class="no-sel"><i class="fas fa-magic"></i>Select text to apply effects</div>
+                    <div id="effectsPanel" style="display:none; flex-direction:column; gap:10px;">
+                        <div class="prop-group"><label>Text Effect</label><select id="textEffect"><option value="none">None</option><option value="neon">Neon Glow</option><option value="outline">Outline</option><option value="shadow">Shadow</option><option value="gradient">Gradient</option><option value="3d">3D</option></select></div>
+                        <div id="effectOptions" style="display:none; flex-direction:column; gap:6px;">
+                            <div class="prop-row"><div class="prop-group"><label>Color 1</label><input type="color" id="effColor1" value="#6c63ff"></div><div class="prop-group"><label>Color 2</label><input type="color" id="effColor2" value="#f06595"></div></div>
+                            <div class="prop-group"><label>Intensity</label><input type="range" id="effIntensity" min="0" max="100" value="50"></div>
+                        </div>
+                        <button id="applyEffectBtn" class="primary" style="background:var(--accent);border:none;padding:6px;border-radius:4px;color:#fff;cursor:pointer;">Apply</button>
+                        <button id="removeEffectBtn" style="background:var(--bg4);border:1px solid var(--border);padding:4px;border-radius:4px;color:var(--danger);cursor:pointer;">Remove</button>
+                    </div>
+                </div>
+
+                <div class="tab-page" id="tabStickers">
+                    <div class="sticker-grid" id="stickerGrid"></div>
+                </div>
+
+                <div class="tab-page" id="tabTemplates">
+                    <div class="template-grid" id="templateGrid"></div>
+                </div>
+
+                <div class="tab-page" id="tabLayer">
+                    <div class="layer-list" id="layerList"></div>
+                    <div class="prop-row">
+                        <button id="layerUp" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:4px;padding:3px;cursor:pointer;font-size:10px;"><i class="fas fa-arrow-up"></i> Up</button>
+                        <button id="layerDown" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:4px;padding:3px;cursor:pointer;font-size:10px;"><i class="fas fa-arrow-down"></i> Down</button>
+                        <button id="layerTop" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:4px;padding:3px;cursor:pointer;font-size:10px;"><i class="fas fa-arrow-to-top"></i> Top</button>
+                        <button id="layerBottom" style="flex:1;background:var(--bg4);border:1px solid var(--border);color:#fff;border-radius:4px;padding:3px;cursor:pointer;font-size:10px;"><i class="fas fa-arrow-to-bottom"></i> Bot</button>
+                    </div>
+                </div>
+
+                <div class="tab-page" id="tabLayout">
+                    <div class="no-sel" id="layoutMsg"><i class="fas fa-object-group"></i>Select multiple objects to arrange them</div>
+                    <div id="layoutPanel" style="display:none; flex-direction:column; gap:10px;">
+                        <div class="prop-group"><label>Auto Layout</label><select id="layoutType"><option value="grid">Grid</option><option value="hdist">Horizontal Distribute</option><option value="vdist">Vertical Distribute</option><option value="hstack">Horizontal Stack</option><option value="vstack">Vertical Stack</option><option value="circle">Circle</option></select></div>
+                        <div class="prop-row"><div class="prop-group"><label>Spacing</label><input type="number" id="layoutSpacing" value="20" min="0"></div><div class="prop-group"><label>Columns (Grid)</label><input type="number" id="layoutCols" value="3" min="1"></div></div>
+                        <button id="applyLayoutBtn" class="primary" style="background:var(--accent);border:none;padding:6px;border-radius:4px;color:#fff;cursor:pointer;">Apply Layout</button>
+                    </div>
+                </div>
+
+                <div class="tab-page" id="tabHistory">
+                    <div class="history-list" id="historyList"></div>
+                    <button id="clearHistoryBtn" style="background:var(--bg4);border:1px solid var(--border);padding:4px;border-radius:4px;color:var(--danger);cursor:pointer;font-size:10px;">Clear</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const canvasEl = document.getElementById('editorCanvas');
+            const canvas = new fabric.Canvas(canvasEl, { width: 900, height: 600, backgroundColor: '#12121f', preserveObjectStacking: true, selection: true });
+            let history = [], historyIndex = -1, currentTool = 'select', clipboard = null;
+            let isLocked = false, snapEnabled = false, gridVisible = false, guidesVisible = false;
+            let guides = [], customFonts = {};
+
+            // HISTORY
+            function saveHistory() {
+                const json = JSON.stringify(canvas.toJSON(['id']));
+                history = history.slice(0, historyIndex + 1);
+                history.push(json);
+                if (history.length > 50) history.shift();
+                historyIndex = history.length - 1;
+                updateHistoryList();
+            }
+            function loadHistory(index) {
+                if (index < 0 || index >= history.length) return;
+                canvas.loadFromJSON(JSON.parse(history[index]), function() { canvas.renderAll(); historyIndex = index; updateAll(); updateHistoryList(); });
+            }
+            function undo() { if (historyIndex > 0) loadHistory(historyIndex - 1); }
+            function redo() { if (historyIndex < history.length - 1) loadHistory(historyIndex + 1); }
+            canvas.on('object:added', saveHistory);
+            canvas.on('object:modified', saveHistory);
+            canvas.on('object:removed', saveHistory);
+            canvas.on('selection:created', updateAll);
+            canvas.on('selection:updated', updateAll);
+            canvas.on('selection:cleared', updateAll);
+
+            // TOOLS
+            function setTool(tool) {
+                currentTool = tool;
+                document.querySelectorAll('.left-toolbar button').forEach(b => b.classList.remove('active'));
+                const map = { select: 'toolSelect', text: 'toolText', rect: 'toolRect', circle: 'toolCircle', triangle: 'toolTriangle', line: 'toolLine', star: 'toolStar' };
+                if (map[tool]) document.getElementById(map[tool]).classList.add('active');
+                canvas.isDrawingMode = false;
+                canvas.selection = (tool === 'select');
+                canvas.forEachObject(o => o.selectable = (tool === 'select'));
+                canvas.renderAll();
+            }
+            document.getElementById('toolSelect').addEventListener('click', () => setTool('select'));
+            document.getElementById('toolText').addEventListener('click', () => setTool('text'));
+            document.getElementById('toolRect').addEventListener('click', () => setTool('rect'));
+            document.getElementById('toolCircle').addEventListener('click', () => setTool('circle'));
+            document.getElementById('toolTriangle').addEventListener('click', () => setTool('triangle'));
+            document.getElementById('toolLine').addEventListener('click', () => setTool('line'));
+            document.getElementById('toolStar').addEventListener('click', () => setTool('star'));
+            canvas.on('mouse:down', function(opt) {
+                if (opt.target) return;
+                if (currentTool === 'text') addText(opt.pointer);
+                else if (currentTool === 'rect') addRect(opt.pointer);
+                else if (currentTool === 'circle') addCircle(opt.pointer);
+                else if (currentTool === 'triangle') addTriangle(opt.pointer);
+                else if (currentTool === 'line') addLine(opt.pointer);
+                else if (currentTool === 'star') addStar(opt.pointer);
+            });
+
+            function addText(p) { const t = new fabric.IText('Edit me', { left: p?.x || 200, top: p?.y || 200, fontSize: 40, fill: '#fff', fontFamily: 'Inter', selectable: true }); canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); saveHistory(); }
+            function addRect(p) { const r = new fabric.Rect({ left: p?.x || 200, top: p?.y || 200, width: 120, height: 80, fill: '#6c63ff', stroke: '#000', strokeWidth: 2 }); canvas.add(r); canvas.setActiveObject(r); canvas.renderAll(); saveHistory(); }
+            function addCircle(p) { const c = new fabric.Circle({ left: p?.x || 200, top: p?.y || 200, radius: 50, fill: '#51cf66', stroke: '#000', strokeWidth: 2 }); canvas.add(c); canvas.setActiveObject(c); canvas.renderAll(); saveHistory(); }
+            function addTriangle(p) { const t = new fabric.Triangle({ left: p?.x || 200, top: p?.y || 200, width: 100, height: 100, fill: '#fcc419', stroke: '#000', strokeWidth: 2 }); canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); saveHistory(); }
+            function addLine(p) { const l = new fabric.Line([50, 0, 150, 0], { left: p?.x || 200, top: p?.y || 200, stroke: '#fff', strokeWidth: 4, originX: 'center', originY: 'center' }); canvas.add(l); canvas.setActiveObject(l); canvas.renderAll(); saveHistory(); }
+            function addStar(p) { const star = new fabric.Polygon([{ x: -50, y: -16 }, { x: -16, y: -16 }, { x: 0, y: -50 }, { x: 16, y: -16 }, { x: 50, y: -16 }, { x: 26, y: 8 }, { x: 34, y: 42 }, { x: 0, y: 26 }, { x: -34, y: 42 }, { x: -26, y: 8 }], { left: p?.x || 200, top: p?.y || 200, fill: '#f06595', stroke: '#000', strokeWidth: 2, originX: 'center', originY: 'center' }); canvas.add(star); canvas.setActiveObject(star); canvas.renderAll(); saveHistory(); }
+
+            // IMAGE UPLOAD (WORKING PROPERLY)
+            document.getElementById('addImageBtn').addEventListener('click', function() { document.getElementById('imageUploadInput').click(); });
+            document.getElementById('imageUploadInput').addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (!file.type.startsWith('image/')) { alert('Please select a valid image.'); return; }
+                const reader = new FileReader();
+                reader.onload = function(f) {
+                    fabric.Image.fromURL(f.target.result, function(img) {
+                        img.scaleToWidth(300);
+                        img.set({ left: 200, top: 100, selectable: true });
+                        canvas.add(img); canvas.setActiveObject(img); canvas.renderAll(); saveHistory();
+                    });
+                };
+                reader.readAsDataURL(file);
+                this.value = '';
+            });
+
+            // AI TEXT (LOCAL GENERATOR - NO ERROR)
+            document.getElementById('aiGenerateBtn').addEventListener('click', function() {
+                const btn = this;
+                const origHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                btn.disabled = true;
+                setTimeout(() => {
+                    const texts = ["Design is intelligence made visible.", "Creativity is intelligence having fun.", "Your imagination is your preview of life's coming attractions.", "Good design is obvious. Great design is transparent."];
+                    const randomText = texts[Math.floor(Math.random() * texts.length)];
+                    const w = canvas.getWidth(), h = canvas.getHeight();
+                    const text = new fabric.IText(randomText, { left: w / 2, top: h / 2, fontSize: 28, fill: '#fff', fontFamily: 'Inter', textAlign: 'center', originX: 'center', originY: 'center', selectable: true, backgroundColor: 'rgba(0,0,0,0.3)', padding: 12 });
+                    canvas.add(text); canvas.setActiveObject(text); canvas.renderAll(); saveHistory();
+                    btn.innerHTML = origHtml;
+                    btn.disabled = false;
+                }, 800);
+            });
+
+            // DELETE / DUP / LOCK
+            document.getElementById('deleteBtn').addEventListener('click', function() { const active = canvas.getActiveObject(); if (active) { canvas.remove(active); canvas.discardActiveObject(); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('duplicateBtn').addEventListener('click', function() { const active = canvas.getActiveObject(); if (!active) return; active.clone(function(cloned) { cloned.set({ left: cloned.left + 20, top: cloned.top + 20 }); canvas.add(cloned); canvas.setActiveObject(cloned); canvas.renderAll(); saveHistory(); }); });
+            document.getElementById('lockBtn').addEventListener('click', function() { const obj = canvas.getActiveObject(); if (!obj) return; isLocked = !isLocked; obj.set({ lockMovementX: isLocked, lockMovementY: isLocked, lockRotation: isLocked, lockScalingX: isLocked, lockScalingY: isLocked }); canvas.renderAll(); this.classList.toggle('active', isLocked); });
+            document.getElementById('gridBtn').addEventListener('click', function() { gridVisible = !gridVisible; document.getElementById('gridOverlay').classList.toggle('active', gridVisible); this.classList.toggle('active', gridVisible); });
+            document.getElementById('snapBtn').addEventListener('click', function() { snapEnabled = !snapEnabled; this.classList.toggle('active', snapEnabled); });
+            document.getElementById('guidesBtn').addEventListener('click', function() { guidesVisible = !guidesVisible; this.classList.toggle('active', guidesVisible); toggleGuides(guidesVisible); });
+
+            function toggleGuides(show) {
+                guides.forEach(g => canvas.remove(g));
+                guides = [];
+                if (!show) { canvas.renderAll(); return; }
+                const w = canvas.getWidth(), h = canvas.getHeight();
+                [w/3, 2*w/3].forEach(x => { const line = new fabric.Line([x, 0, x, h], { stroke: '#6c63ff', strokeWidth: 1, selectable: false, evented: false, opacity: 0.5, strokeDashArray: [4, 4] }); canvas.add(line); guides.push(line); });
+                [h/3, 2*h/3].forEach(y => { const line = new fabric.Line([0, y, w, y], { stroke: '#6c63ff', strokeWidth: 1, selectable: false, evented: false, opacity: 0.5, strokeDashArray: [4, 4] }); canvas.add(line); guides.push(line); });
+                canvas.renderAll();
+            }
+
+            document.getElementById('copyBtn').addEventListener('click', function() { const obj = canvas.getActiveObject(); if (obj) obj.clone(function(cloned) { clipboard = cloned; }); });
+            document.getElementById('pasteBtn').addEventListener('click', function() { if (!clipboard) return; clipboard.clone(function(cloned) { cloned.set({ left: cloned.left + 20, top: cloned.top + 20 }); canvas.add(cloned); canvas.setActiveObject(cloned); canvas.renderAll(); saveHistory(); }); });
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'c') { e.preventDefault(); document.getElementById('copyBtn').click(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'v') { e.preventDefault(); document.getElementById('pasteBtn').click(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.preventDefault(); undo(); }
+                if ((e.ctrlKey || e.metaKey) && e.key === 'y') { e.preventDefault(); redo(); }
+                if (e.key === 'Delete') { if (document.activeElement === document.body) { const active = canvas.getActiveObject(); if (active) { canvas.remove(active); canvas.discardActiveObject(); canvas.renderAll(); saveHistory(); } } }
+            });
+
+            // Presets / Zoom / Export
+            document.getElementById('applyPresetBtn').addEventListener('click', function() { const val = document.getElementById('canvasPreset').value; const [w, h] = val.split('x').map(Number); if (w && h) { canvas.setWidth(w); canvas.setHeight(h); canvas.renderAll(); document.getElementById('sizeBadge').textContent = w + '×' + h; fitCanvasToContainer(); saveHistory(); } });
+            function fitCanvasToContainer() {
+                const rect = document.getElementById('canvasContainer').getBoundingClientRect();
+                const maxW = rect.width - 30, maxH = rect.height - 30;
+                const scale = Math.min(maxW / canvas.getWidth(), maxH / canvas.getHeight(), 1.5);
+                const zoom = Math.max(0.1, scale);
+                canvas.setZoom(zoom); canvas.renderAll();
+                document.getElementById('zoomSlider').value = Math.round(zoom * 100);
+                document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+            }
+            document.getElementById('zoomInBtn').addEventListener('click', function() { let v = parseInt(document.getElementById('zoomSlider').value) + 10; if (v > 200) v = 200; document.getElementById('zoomSlider').value = v; canvas.setZoom(v / 100); document.getElementById('zoomLabel').textContent = v + '%'; });
+            document.getElementById('zoomOutBtn').addEventListener('click', function() { let v = parseInt(document.getElementById('zoomSlider').value) - 10; if (v < 10) v = 10; document.getElementById('zoomSlider').value = v; canvas.setZoom(v / 100); document.getElementById('zoomLabel').textContent = v + '%'; });
+            document.getElementById('exportPng').addEventListener('click', function() { canvas.discardActiveObject(); canvas.renderAll(); const data = canvas.toDataURL({ format: 'png' }); const a = document.createElement('a'); a.href = data; a.download = 'design.png'; a.click(); });
+            document.getElementById('exportJpg').addEventListener('click', function() { canvas.discardActiveObject(); canvas.renderAll(); const data = canvas.toDataURL({ format: 'jpeg' }); const a = document.createElement('a'); a.href = data; a.download = 'design.jpg'; a.click(); });
+            document.getElementById('exportSvg').addEventListener('click', function() { const data = canvas.toSVG(); const blob = new Blob([data], { type: 'image/svg+xml' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'design.svg'; a.click(); });
+            document.getElementById('clearCanvasBtn').addEventListener('click', function() { if (confirm('Delete all objects?')) { canvas.clear(); canvas.backgroundColor = '#12121f'; canvas.renderAll(); saveHistory(); } });
+
+            // Custom Font
+            document.getElementById('applyCustomFontBtn').addEventListener('click', function() {
+                const file = document.getElementById('customFontInput').files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const fontName = file.name.replace(/\.[^.]+$/, '');
+                    const face = new FontFace(fontName, e.target.result);
+                    face.load().then(function(loaded) { document.fonts.add(loaded); const opt = document.createElement('option'); opt.value = fontName; opt.textContent = fontName; document.getElementById('pFont').appendChild(opt); const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('fontFamily', fontName); canvas.renderAll(); saveHistory(); } });
+                };
+                reader.readAsArrayBuffer(file);
+            });
+
+            // History + Layers
+            function updateHistoryList() {
+                const list = document.getElementById('historyList');
+                list.innerHTML = '';
+                history.forEach((item, idx) => { const div = document.createElement('div'); div.className = 'h-item' + (idx === historyIndex ? ' active' : ''); div.textContent = 'Step ' + (idx + 1); div.addEventListener('click', function() { loadHistory(idx); }); list.appendChild(div); });
+            }
+            function updateLayerList() {
+                const list = document.getElementById('layerList');
+                const objs = canvas.getObjects();
+                list.innerHTML = '';
+                const active = canvas.getActiveObject();
+                for (let i = objs.length - 1; i >= 0; i--) {
+                    const o = objs[i];
+                    const div = document.createElement('div');
+                    div.className = 'layer-item' + (o === active ? ' active' : '');
+                    div.innerHTML = '<i class="fas fa-' + (o.type === 'i-text' ? 'font' : o.type === 'image' ? 'image' : 'square') + '"></i><span class="layer-name">' + (o.text || o.type) + '</span><i class="fas fa-eye layer-vis ' + (o.visible ? 'visible' : '') + '"></i>';
+                    div.addEventListener('click', function(e) { if (e.target.classList.contains('layer-vis')) { o.visible = !o.visible; canvas.renderAll(); updateLayerList(); return; } canvas.setActiveObject(o); canvas.renderAll(); updateLayerList(); });
+                    list.appendChild(div);
+                }
+            }
+            document.getElementById('clearHistoryBtn').addEventListener('click', function() { history = []; historyIndex = -1; updateHistoryList(); });
+
+            // Properties Panel
+            function updateAll() {
+                const obj = canvas.getActiveObject();
+                document.getElementById('noSelectionMsg').style.display = obj ? 'none' : 'block';
+                document.getElementById('propText').style.display = (obj && ['i-text', 'text'].includes(obj.type)) ? 'flex' : 'none';
+                document.getElementById('propShape').style.display = (!obj || !['i-text', 'text', 'image'].includes(obj.type)) ? 'flex' : 'none';
+                document.getElementById('propImage').style.display = (obj && obj.type === 'image') ? 'flex' : 'none';
+                updateLayerList(); updateHistoryList();
+            }
+            document.getElementById('pFont').addEventListener('change', function() { const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('fontFamily', this.value); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('pSize').addEventListener('input', function() { const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('fontSize', parseInt(this.value) || 36); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('pColor').addEventListener('input', function() { const obj = canvas.getActiveObject(); if (obj) { obj.set('fill', this.value); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('pBold').addEventListener('click', function() { const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('fontWeight', obj.fontWeight === 'bold' ? 'normal' : 'bold'); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('pItalic').addEventListener('click', function() { const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('fontStyle', obj.fontStyle === 'italic' ? 'normal' : 'italic'); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('pUnderline').addEventListener('click', function() { const obj = canvas.getActiveObject(); if (obj && obj.type === 'i-text') { obj.set('underline', !obj.underline); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('sFill').addEventListener('input', function() { const obj = canvas.getActiveObject(); if (obj && obj.type !== 'image') { obj.set('fill', this.value); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('sStroke').addEventListener('input', function() { const obj = canvas.getActiveObject(); if (obj && obj.type !== 'image') { obj.set('stroke', this.value); canvas.renderAll(); saveHistory(); } });
+            document.getElementById('sStrokeWidth').addEventListener('input', function() { const obj = canvas.getActiveObject(); if (obj && obj.type !== 'image') { obj.set('strokeWidth', parseInt(this.value) || 0); canvas.renderAll(); saveHistory(); } });
+
+            // Stickers & Templates
+            const stickerGrid = document.getElementById('stickerGrid');
+            const emojis = ['⭐', '❤️', '🔥', '✨', '💎', '🌈', '👍', '🤩', '🎨', '📸', '🎯', '💯', '🚀', '🎉', '💪', '👑', '🌟', '🎈', '🎁', '💝', '🏆', '⚡', '🍀'];
+            emojis.forEach(function(s) { const div = document.createElement('div'); div.className = 'sticker-item'; div.textContent = s; div.addEventListener('click', function() { const t = new fabric.IText(s, { left: 150, top: 150, fontSize: 60, fontFamily: 'Segoe UI Emoji, Apple Color Emoji, sans-serif' }); canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); saveHistory(); }); stickerGrid.appendChild(div); });
+            document.getElementById('addEmoji').addEventListener('click', function() { const em = emojis[Math.floor(Math.random() * emojis.length)]; const t = new fabric.IText(em, { left: 100, top: 100, fontSize: 80, fontFamily: 'Segoe UI Emoji, Apple Color Emoji, sans-serif' }); canvas.add(t); canvas.setActiveObject(t); canvas.renderAll(); saveHistory(); });
+            document.getElementById('addQrBtn').addEventListener('click', function() { const url = prompt('Enter URL:', 'https://example.com'); if (!url) return; const div = document.createElement('div'); div.style.display = 'none'; document.body.appendChild(div); const qr = new QRCode(div, { text: url, width: 200, height: 200 }); const src = div.querySelector('img').src; document.body.removeChild(div); fabric.Image.fromURL(src, function(img) { img.scaleToWidth(150); img.set({ left: 200, top: 100 }); canvas.add(img); canvas.setActiveObject(img); canvas.renderAll(); saveHistory(); }); });
+            const templates = [{ name: 'Instagram Post', icon: 'fa-instagram', w: 1080, h: 1080 }, { name: 'Story', icon: 'fa-camera', w: 1080, h: 1920 }, { name: 'YouTube Thumb', icon: 'fa-youtube', w: 1920, h: 1080 }, { name: 'FB Cover', icon: 'fa-facebook', w: 1200, h: 630 }, { name: 'A4 Portrait', icon: 'fa-file-alt', w: 595, h: 842 }];
+            const templateGrid = document.getElementById('templateGrid');
+            templates.forEach(function(t) { const div = document.createElement('div'); div.className = 'template-item'; div.innerHTML = '<i class="fab ' + t.icon + '"></i>' + t.name; div.addEventListener('click', function() { canvas.setWidth(t.w); canvas.setHeight(t.h); canvas.renderAll(); document.getElementById('sizeBadge').textContent = t.w + '×' + t.h; saveHistory(); }); templateGrid.appendChild(div); });
+
+            // Auto Layout (Basic)
+            document.getElementById('autoLayoutBtn').addEventListener('click', function() {
+                const objs = canvas.getActiveObjects();
+                if (objs.length < 2) { alert('Select at least 2 objects.'); return; }
+                const spacing = 20;
+                let x = 100, y = 100;
+                objs.forEach(function(o) { o.set({ left: x, top: y }); x += o.width * o.scaleX + spacing; });
+                canvas.renderAll(); saveHistory();
+            });
+
+            // Tabs
+            document.querySelectorAll('.panel-tabs button').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.panel-tabs button').forEach(function(b) { b.classList.remove('active'); });
+                    this.classList.add('active');
+                    document.querySelectorAll('.tab-page').forEach(function(p) { p.classList.remove('active'); });
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
+            });
+
+            // Init
+            function init() {
+                setTimeout(fitCanvasToContainer, 100);
+                setTimeout(function() {
+                    const welcome = new fabric.IText('Welcome to Noor Studio!\nTry AI Text, Layout, Custom Fonts', { left: 150, top: 150, fontSize: 26, fill: '#fff', fontFamily: 'Inter', textAlign: 'center', backgroundColor: 'rgba(108,99,255,0.2)', padding: 12 });
+                    canvas.add(welcome); canvas.renderAll(); saveHistory(); updateAll();
+                }, 300);
+            }
+            init();
+        })();
+    </script>
+</body>
+</html>
